@@ -29,6 +29,7 @@ export function useSocket(feedId) {
   const [oddsMap, setOddsMap] = useState({});
   const [settlement, setSettlement] = useState(null);
   const [betResult, setBetResult] = useState(null);
+  const [cvTracks, setCvTracks] = useState(null);
 
   const token = useAuthStore((s) => s.token);
 
@@ -112,6 +113,19 @@ export function useSocket(feedId) {
       // Balance updates are handled globally via the auth store refetch
     };
 
+    const onCvTracks = (data) => {
+      // Debug: uncomment to verify arrival in dev
+      // eslint-disable-next-line no-console
+      if (typeof window !== 'undefined' && window.__DEBUG_CV__) {
+        // eslint-disable-next-line no-console
+        console.log('[cv:tracks]', data?.round_id?.slice(0, 8), 'n=', data?.tracks?.length, 'count=', data?.count);
+      }
+      // Accept any cv:tracks event for this feed. cv-counter only ever
+      // processes one round at a time, so trust its payload even if the
+      // frontend's currentRoundId hasn't caught up yet.
+      setCvTracks(data);
+    };
+
     socket.on('feed:viewers', onViewers);
     socket.on('chat:message', onChat);
     socket.on('round:opened', onRoundOpened);
@@ -120,6 +134,7 @@ export function useSocket(feedId) {
     socket.on('odds:updated', onOddsUpdated);
     socket.on('bet:result', onBetResult);
     socket.on('user:balance', onBalance);
+    socket.on('cv:tracks', onCvTracks);
 
     return () => {
       socket.emit('leave:feed', { feed_id: feedId });
@@ -131,9 +146,11 @@ export function useSocket(feedId) {
       socket.off('odds:updated', onOddsUpdated);
       socket.off('bet:result', onBetResult);
       socket.off('user:balance', onBalance);
+      socket.off('cv:tracks', onCvTracks);
       setChatMessages([]);
       setRounds([]);
       setOddsMap({});
+      setCvTracks(null);
     };
   }, [feedId]);
 
@@ -155,6 +172,7 @@ export function useSocket(feedId) {
     oddsMap,
     settlement,
     betResult,
+    cvTracks,
     sendChat,
     clearBetResult: () => setBetResult(null),
     clearSettlement: () => setSettlement(null),

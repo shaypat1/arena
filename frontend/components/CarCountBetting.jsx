@@ -11,7 +11,7 @@ import clsx from 'clsx';
 
 export default function CarCountBetting({ round, timerStart }) {
   const { user } = useAuth();
-  const { post } = useApi();
+  const { post, get } = useApi();
 
   const [elapsed, setElapsed] = useState(0);
   const [selectedBet, setSelectedBet] = useState(null); // 'even' | 'odd' | 'zero'
@@ -19,6 +19,7 @@ export default function CarCountBetting({ round, timerStart }) {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState(null);
   const [placedBet, setPlacedBet] = useState(null);
+  const [settlement, setSettlement] = useState(null); // { car_count, winning_outcome }
 
   // Single timer from timerStart
   useEffect(() => {
@@ -36,11 +37,40 @@ export default function CarCountBetting({ round, timerStart }) {
     setAmount('');
     setError(null);
     setPlacedBet(null);
+    setSettlement(null);
   }, [round?.id]);
 
   const phase1Left = Math.max(0, Math.ceil(15 - elapsed));
   const phase2Left = Math.max(0, Math.ceil(30 - elapsed));
-  const phase = elapsed < 15 ? 1 : elapsed < 30 ? 2 : 0;
+  const phase3Left = Math.max(0, Math.ceil(34 - elapsed));
+  // Phase 1: betting (0-15s); Phase 2: counting (15-30s); Phase 3: result (30-34s)
+  const phase = elapsed < 15 ? 1 : elapsed < 30 ? 2 : elapsed < 34 ? 3 : 0;
+
+  // ── Fetch settlement result once counting phase ends ─────
+  useEffect(() => {
+    if (phase !== 3 || !round?.id || settlement) return;
+    let cancelled = false;
+    let attempt = 0;
+    async function poll() {
+      while (!cancelled && attempt < 8) {
+        try {
+          const data = await get(`/api/rounds/${round.id}`);
+          if (cancelled) return;
+          if (data?.round?.status === 'settled') {
+            setSettlement({
+              car_count: data.round.settlement_data?.car_count,
+              winning_outcome: data.round.winning_outcome,
+            });
+            return;
+          }
+        } catch {}
+        attempt += 1;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    }
+    poll();
+    return () => { cancelled = true; };
+  }, [phase, round?.id, settlement, get]);
 
   const EVEN_ODD_PAYOUT = 1.96;
   const ZERO_PAYOUT = 100;
@@ -248,10 +278,73 @@ export default function CarCountBetting({ round, timerStart }) {
         </>
       )}
 
-      {/* ─── Round over ─── */}
+      {/* ─── PHASE 3: Results ─── */}
+      {phase === 3 && (() => {
+        const cars = settlement?.car_count;
+        const winning = settlement?.winning_outcome;
+        // Did the user win?
+        const userWon = placedBet && winning && placedBet.outcome === winning;
+        const userLost = placedBet && winning && placedBet.outcome !== winning;
+        const headerGradient = userWon
+          ? 'from-emerald-600/30 to-green-600/30'
+          : userLost
+            ? 'from-red-600/30 to-rose-600/30'
+            : 'from-indigo-600/20 to-purple-600/20';
+        return (
+          <>
+            <div className={clsx('border-b border-gray-700/50 px-5 py-4 text-center bg-gradient-to-r', headerGradient)}>
+              <p className="text-xs uppercase tracking-wider text-gray-300 mb-1">Final count</p>
+              {cars === undefined ? (
+                <div className="flex items-center justify-center gap-2 h-10">
+                  <svg className="animate-spin h-5 w-5 text-indigo-400" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-sm text-gray-400">Tallying...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-5xl font-black text-white tabular-nums">{cars}</p>
+                  <p className={clsx(
+                    'text-xl font-black mt-1 uppercase tracking-wider',
+                    winning === 'zero' ? 'text-emerald-400'
+                      : winning === 'even' ? 'text-blue-400'
+                        : 'text-purple-400'
+                  )}>{winning || '—'}</p>
+                </>
+              )}
+            </div>
+
+            <div className="p-5 space-y-3">
+              {placedBet ? (
+                userWon ? (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
+                    <p className="text-xs uppercase tracking-wider text-emerald-400 mb-1">You Won</p>
+                    <p className="text-2xl font-black text-emerald-400">
+                      +${(placedBet.amount * (placedBet.outcome === 'zero' ? ZERO_PAYOUT : EVEN_ODD_PAYOUT) - placedBet.amount).toFixed(2)}
+                    </p>
+                  </div>
+                ) : userLost ? (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
+                    <p className="text-xs uppercase tracking-wider text-red-400 mb-1">You Lost</p>
+                    <p className="text-2xl font-black text-red-400">−${placedBet.amount.toFixed(2)}</p>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 text-sm py-2">Settling bet…</div>
+                )
+              ) : (
+                <p className="text-center text-gray-500 text-sm">No bet this round</p>
+              )}
+              <p className="text-center text-xs text-gray-600">Next round in {phase3Left}s…</p>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* ─── Round over (cycle done, waiting for parent to swap) ─── */}
       {phase === 0 && (
         <div className="p-8 text-center">
-          <p className="text-sm text-gray-500">Round complete — next round starting...</p>
+          <p className="text-sm text-gray-500">Loading next round…</p>
         </div>
       )}
     </div>

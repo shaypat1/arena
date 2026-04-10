@@ -113,7 +113,8 @@ router.get('/active/:feedId', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT r.*, bt.name AS bet_type_name, bt.slug AS bet_type_slug,
               bt.options, bt.min_bet, bt.max_bet, bt.category,
-              c.id AS cam_id, c.name AS camera_name, c.image_url AS camera_image_url, c.external_id AS camera_external_id
+              c.id AS cam_id, c.name AS camera_name, c.image_url AS camera_image_url,
+              c.external_id AS camera_external_id, c.roi_geometry AS camera_roi_geometry
        FROM rounds r
        JOIN bet_types bt ON r.bet_type_id = bt.id
        LEFT JOIN cameras c ON r.camera_id = c.id
@@ -130,7 +131,13 @@ router.get('/active/:feedId', async (req, res) => {
         pool_state: poolState,
         options,
         odds: calculateOdds(poolState, Number(r.total_pool)),
-        camera: r.cam_id ? { id: r.cam_id, name: r.camera_name, image_url: r.camera_image_url, external_id: r.camera_external_id } : null,
+        camera: r.cam_id ? {
+          id: r.cam_id,
+          name: r.camera_name,
+          image_url: r.camera_image_url,
+          external_id: r.camera_external_id,
+          roi_geometry: r.camera_roi_geometry,
+        } : null,
       };
     });
 
@@ -164,6 +171,9 @@ router.get('/:id', async (req, res) => {
     round.pool_state = poolState;
     round.options = options;
     round.odds = calculateOdds(poolState, Number(round.total_pool));
+    if (typeof round.settlement_data === 'string') {
+      try { round.settlement_data = JSON.parse(round.settlement_data); } catch {}
+    }
 
     // Include bets if settled
     if (round.status === 'settled') {

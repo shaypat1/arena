@@ -1,0 +1,6 @@
+ultralytics>=8.3.0
+lap>=0.5.12
+opencv-python-headless>=4.10.0
+numpy>=1.26
+redis>=5.0
+psycopg2-binary>=2.9

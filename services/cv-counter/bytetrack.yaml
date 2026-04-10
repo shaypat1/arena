@@ -1,0 +1,14 @@
+# ByteTrack config tuned for Arena car counter on highway footage at 10 FPS.
+#
+# The main failure mode we fight is ID-flip: a fast-moving car gets a new
+# track ID when its per-frame IoU overlap drops below the match threshold.
+# When that happens mid-ROI, our counter never sees the same track cross
+# both sides of the line → undercount. So we relax match_thresh and keep
+# lost tracks alive longer.
+tracker_type: bytetrack
+track_high_thresh: 0.4    # first association — include medium-conf detections
+track_low_thresh: 0.1     # recover lost tracks with low-confidence matches
+new_track_thresh: 0.5     # moderate bar for starting a new track
+track_buffer: 60          # keep lost tracks alive 60 frames (~6s @ 10fps)
+match_thresh: 0.9         # LOOSE matching (match_thresh is max cost=1-IoU, so higher = more lenient). At 10 FPS, even fast cars stay associated.
+fuse_score: true

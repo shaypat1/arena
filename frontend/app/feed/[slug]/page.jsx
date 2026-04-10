@@ -9,7 +9,9 @@ import { useApi } from '@/hooks/useApi';
 import { useSocket } from '@/hooks/useSocket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const CYCLE_DURATION = 30; // 15s bet + 15s count
+// 15s bet + 15s count + 4s result display before swapping to next round.
+// The result display fetches the settled round's car_count from the API.
+const CYCLE_DURATION = 34;
 
 export default function FeedPage() {
   const { slug } = useParams();
@@ -30,7 +32,7 @@ export default function FeedPage() {
   const preloaded = useRef(false);
 
   const feedId = feed?.id;
-  const { connected, viewers, chatMessages, sendChat } = useSocket(feedId);
+  const { connected, viewers, chatMessages, sendChat, cvTracks } = useSocket(feedId);
 
   // ─── Load feed on mount ───────────────────────────────
   useEffect(() => {
@@ -205,6 +207,9 @@ export default function FeedPage() {
             feedName={cameraName}
             onCameraReady={handleCameraReady}
             revealed={revealed}
+            roiGeometry={currentCamera?.roi_geometry}
+            cvTracks={cvTracks}
+            currentRoundId={currentRound?.id}
           />
           <div className="hidden lg:block h-[280px]">
             <ChatPanel messages={chatMessages} onSend={sendChat} connected={connected} />

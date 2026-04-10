@@ -18,6 +18,7 @@ const { router: settlementRoutes, init: initSettlement } = require('./routes/set
 const { router: disputeRoutes, init: initDisputes } = require('./routes/disputes');
 const { router: leaderboardRoutes, init: initLeaderboard } = require('./routes/leaderboard');
 const { router: userRoutes, init: initUsers } = require('./routes/users');
+const { router: adminRoutes, init: initAdmin } = require('./routes/admin');
 
 // Service modules
 const { router: walletRoutes, init: initWallet } = require('../wallet/index');
@@ -57,6 +58,7 @@ async function start() {
   initDisputes(pool);
   initLeaderboard(pool);
   initUsers(pool);
+  initAdmin(pool);
   initBetting(pool, redis);
 
   // ─── Initialize wallet service ──────────────────────────
@@ -76,6 +78,9 @@ async function start() {
   app.use('/api/settlement-log', rateLimiter, settlementRoutes);
   app.use('/api/leaderboard', rateLimiter, leaderboardRoutes);
   app.use('/api/users', rateLimiter, userRoutes);
+
+  // Admin routes (camera / ROI management) — local dev, no auth
+  app.use('/api/admin', adminRoutes);
 
   // Disputes — list is public, create requires auth
   app.get('/api/disputes', rateLimiter, disputeRoutes);

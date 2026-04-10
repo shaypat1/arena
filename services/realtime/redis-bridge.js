@@ -96,6 +96,21 @@ async function startBridge(redisUrl) {
     });
   });
 
+  // Live CV debug stream: per-frame tracks + running count, for drawing
+  // live dots on the FeedPlayer during the counting phase.
+  await subscriber.subscribe('cv_tracks', (message) => {
+    const io = getIO();
+    if (!io) return;
+    try {
+      const data = JSON.parse(message);
+      if (data.feed_id) {
+        io.to(`feed:${data.feed_id}`).emit('cv:tracks', data);
+      }
+    } catch (err) {
+      // swallow bad payloads
+    }
+  });
+
   console.log('[redis-bridge] Subscribed to all channels');
 }
 
