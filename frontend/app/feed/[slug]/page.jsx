@@ -6,7 +6,6 @@ import FeedPlayer from '@/components/FeedPlayer';
 import CarCountBetting from '@/components/CarCountBetting';
 import ChatPanel from '@/components/ChatPanel';
 import { useApi } from '@/hooks/useApi';
-import { useAuth } from '@/hooks/useAuth';
 import { useSocket } from '@/hooks/useSocket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';

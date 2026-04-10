@@ -1,66 +1,38 @@
-.PHONY: up down migrate seed logs test dev clean full rebuild db redis-cli
+.PHONY: start stop migrate install db redis-cli
 
-# Start core services (postgres, redis, minio, api, frontend)
-up:
-	docker-compose up -d postgres redis minio
-	@echo "Waiting for services to be healthy..."
-	@sleep 3
-	docker-compose up -d api frontend
+# Start everything (API + frontend + simulator)
+start:
+	@echo "Starting API..."
+	@cd services/api && export $$(grep -v '^#' ../../.env | xargs) && NODE_PATH=./node_modules:../wallet/node_modules node index.js &
+	@echo "Starting frontend..."
+	@cd frontend && npx next dev --port 3000 &
+	@echo "Starting feed simulator..."
+	@cd services/feed-simulator && python3 simulator.py &
+	@echo "All services started"
 
-# Start with feed simulator for development
-dev:
-	docker-compose --profile dev up -d
-
-# Start everything including CV pipeline
-full:
-	docker-compose --profile dev --profile full up -d
-
-# Stop all services
-down:
-	docker-compose down
+# Stop all
+stop:
+	@pkill -f "node index.js" 2>/dev/null; pkill -f "next dev" 2>/dev/null; pkill -f "simulator.py" 2>/dev/null; echo "Stopped"
 
 # Run database migrations
 migrate:
-	@docker-compose exec postgres psql -U arena -d arena -f /docker-entrypoint-initdb.d/001_initial_schema.sql
-	@docker-compose exec postgres psql -U arena -d arena -f /docker-entrypoint-initdb.d/002_seed_feeds.sql
-	@docker-compose exec postgres psql -U arena -d arena -f /docker-entrypoint-initdb.d/003_balance_audit.sql
-	@echo "Migrations complete."
+	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/001_initial_schema.sql
+	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/002_seed_feeds.sql
+	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/003_balance_audit.sql
+	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/004_cameras.sql
+	@echo "Migrations complete"
 
-# Seed database (runs migrations)
-seed: migrate
-
-# View logs
-logs:
-	docker-compose logs -f
-
-# View logs for specific service
-logs-%:
-	docker-compose logs -f $*
-
-# Run all tests
-test:
-	cd services/api && npm test
-	cd services/cv-pipeline && python -m pytest
-
-# Clean everything (volumes included)
-clean:
-	docker-compose down -v
-	@echo "All volumes removed."
-
-# Rebuild all images
-rebuild:
-	docker-compose build --no-cache
-
-# Database shell
-db:
-	docker-compose exec postgres psql -U arena -d arena
-
-# Redis shell
-redis-cli:
-	docker-compose exec redis redis-cli
-
-# Install all dependencies locally
+# Install all dependencies
 install:
 	cd services/api && npm install
 	cd services/wallet && npm install
 	cd frontend && npm install
+	pip3 install redis psycopg2-binary numpy
+
+# Database shell
+db:
+	/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena
+
+# Redis shell
+redis-cli:
+	redis-cli

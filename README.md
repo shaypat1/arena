@@ -1,96 +1,51 @@
 # Arena
 
-Real-world betting platform where users bet on observable events from public livestream camera feeds. Crypto-funded, CV-settled, provably fair.
+Bet on cars from around the world. Watch live traffic cameras, predict even/odd/zero car counts, win.
 
-## Quick Start
+## Setup
 
 ```bash
-# 1. Copy environment config
+# Prerequisites: Homebrew, Node 20, Python 3
+brew install postgresql@16 redis
+brew services start postgresql@16
+brew services start redis
+
+# Create database
+psql -U $(whoami) -d postgres -c "CREATE USER arena WITH PASSWORD 'arena_dev' CREATEDB;"
+psql -U $(whoami) -d postgres -c "CREATE DATABASE arena OWNER arena;"
+
+# Install dependencies
+make install
+
+# Run migrations
 cp .env.example .env
+make migrate
 
-# 2. Start all services (postgres, redis, minio, api, frontend, feed simulator)
-make dev
-
-# 3. Wait for services to initialize (~15s), then open
-open http://localhost:3000
+# Start everything
+make start
 ```
 
-## Architecture
+Open http://localhost:3000
 
-```
-Frontend (Next.js :3000)
-    │
-    ├── HTTP REST ──► API Gateway (Express :3001)
-    │                     ├── Auth (JWT)
-    │                     ├── Wallet Service (deposit/withdraw, USD ledger)
-    │                     ├── Betting Engine (rounds, pools, settlement)
-    │                     └── Geo-blocking (451 for restricted regions)
-    │
-    └── WebSocket ──► Socket.IO Server
-                          └── Redis Pub/Sub Bridge
-                                  │
-              ┌─────────────────────┘
-              │
-    Feed Simulator / CV Pipeline
-              │
-         Redis "settlement" channel
-              │
-         Settlement Listener ──► Betting Engine (settleRound)
-```
+## How it runs
 
-## Services
+- **PostgreSQL** — users, bets, rounds, cameras (43 live traffic cams worldwide)
+- **Redis** — pub/sub for round events and settlement
+- **API** (port 3001) — Express + Socket.IO, round scheduler, settlement listener
+- **Frontend** (port 3000) — Next.js, HLS video player, betting UI
+- **Feed simulator** — settles rounds with random outcomes (temporary until CV is wired in)
 
-| Service | Port | Description |
-|---|---|---|
-| `postgres` | 5432 | PostgreSQL 16 — all platform data |
-| `redis` | 6379 | Pub/sub events, rate limiting, price cache |
-| `minio` | 9000/9001 | S3-compatible frame/clip storage |
-| `api` | 3001 | REST API + WebSocket + round scheduler + settlement listener |
-| `frontend` | 3000 | Next.js 14 app |
-| `feed-simulator` | — | Dev-mode settlement generator (profile: dev) |
-| `cv-pipeline` | — | YOLOv8 real CV detection (profile: full) |
+## Game loop
 
-## Make Commands
+1. Random daytime camera selected (timezone-aware filtering)
+2. **15 seconds** — "Place Your Bets" (feed hidden, location shown)
+3. **15 seconds** — "Counting Cars" (feed revealed, bets locked)
+4. Round settles, next camera loads
 
-```bash
-make up        # Start core services (no simulator)
-make dev       # Start with feed simulator
-make full      # Start everything including CV pipeline
-make down      # Stop all services
-make migrate   # Run database migrations
-make logs      # Tail all service logs
-make db        # PostgreSQL shell
-make redis-cli # Redis shell
-make clean     # Remove all volumes
-make rebuild   # Rebuild all Docker images
-make install   # Install npm dependencies locally
-```
+## Betting
 
-## Betting Model
+- **Even** — even number of cars (pays 1.96x)
+- **Odd** — odd number of cars (pays 1.96x)
+- **Zero** — no cars at all (pays 100x)
 
-Seeded parimutuel with 5% rake:
-
-- House seeds both sides of every pool weighted by historical probability
-- Users bet into the pool — odds are `(total_pool * 0.95) / amount_on_outcome`
-- Odds update live as bets come in
-- At settlement: 5% rake off the top, remainder split proportionally among winners
-- House has zero directional risk — profits from rake regardless of outcome
-
-## Tech Stack
-
-- **Frontend:** Next.js 14, React 18, TailwindCSS, Socket.IO, Zustand
-- **API:** Node.js 20, Express, Socket.IO, Bull queues
-- **Database:** PostgreSQL 16 (micro-USD BIGINT ledger)
-- **Cache/Pubsub:** Redis 7
-- **CV Pipeline:** Python 3.11, YOLOv8, OpenCV, ffmpeg
-- **Crypto:** ethers.js (ETH), bitcoinjs-lib (BTC), @solana/web3.js (USDT)
-
-## Feeds
-
-4 live camera feeds from YouTube (via worldcams.tv):
-- Times Square Crosswalk (New York)
-- Abbey Road Crossing (London)
-- Jackson Hole Town Square (Wyoming)
-- Nampo Port Fish Market (Busan)
-
-Each feed has 2 bet types: Next Car Color (8 outcomes) and Pedestrian Count (over/under).
+House edge: 2% on even/odd via payout, plus the zero outcome killing both sides.

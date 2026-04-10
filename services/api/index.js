@@ -10,7 +10,6 @@ const { createClient } = require('redis');
 const config = require('./config');
 const { authRequired, authOptional } = require('./middleware/auth');
 const { generalLimiter, betLimiter, withdrawalLimiter } = require('./middleware/rate-limit');
-const { geoBlock } = require('./middleware/geo-block');
 
 // Route modules
 const { router: authRoutes, init: initAuth } = require('./routes/auth');
@@ -35,9 +34,6 @@ const server = http.createServer(app);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
-app.use(geoBlock);
-
-// Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
 // ─── Health check ───────────────────────────────────────────
@@ -143,8 +139,6 @@ async function start() {
   // ─── Start server ───────────────────────────────────────
   server.listen(config.port, () => {
     console.log(`[api] Arena API server running on port ${config.port}`);
-    console.log(`[api] Environment: ${config.nodeEnv}`);
-    console.log(`[api] Geo-blocking: ${config.geoBlockEnabled ? 'enabled' : 'disabled'}`);
   });
 
   // ─── Graceful shutdown ──────────────────────────────────
