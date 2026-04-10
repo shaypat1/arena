@@ -20,6 +20,7 @@ migrate:
 	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/002_seed_feeds.sql
 	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/003_balance_audit.sql
 	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/004_cameras.sql
+	@/opt/homebrew/opt/postgresql@16/bin/psql -U arena -d arena -f db/migrations/005_seed_cameras.sql
 	@echo "Migrations complete"
 
 # Install all dependencies
