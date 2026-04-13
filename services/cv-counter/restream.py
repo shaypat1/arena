@@ -253,10 +253,18 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
     frame_size = out_w * out_h * 3
     frame_idx = 0
     t_start = time.time()
+    prev_on_line = []  # list of cx positions that were on the green line last frame
+
+    gl = stencil.get("green_line", {"y": 0.40, "left": 0.10, "right": 0.90})
+    green_y = int(out_h * gl["y"])
+    green_left = int(out_w * gl["left"])
+    green_right = int(out_w * gl["right"])
+    line_tolerance = int(out_h * 0.03)  # ~16px zone around the line
+    dedup_dist = 80  # px — two centroids closer than this on the line = same car
 
     logger.info(f"Stencil: {json.dumps(stencil)}")
     logger.info(f"Processing at {out_w}x{out_h} @ {out_fps}fps, conf={conf}")
-    logger.info(f"Counting: car must cross BOTH green and amber lines within trapezoid bounds")
+    logger.info(f"Counting: centroid on green line (y={green_y} +/-{line_tolerance}px, x={green_left}-{green_right})")
 
     try:
         while True:
@@ -279,8 +287,30 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
                              "cls": cls, "conf": float(box.conf[0])})
 
             tracker.update(dets)
-            newly_counted = tracker.check_gate(stencil, out_w, out_h)
-            count += len(newly_counted)
+
+            # Count: any detection centroid on the green line that wasn't there last frame
+            on_line_now = []
+            for d in dets:
+                cx, cy = d["cx"], d["cy"]
+                if abs(cy - green_y) < line_tolerance and green_left <= cx <= green_right:
+                    on_line_now.append(cx)
+                    # Check if this is a new car (not near any centroid from last frame)
+                    is_new = True
+                    for prev_cx in prev_on_line:
+                        if abs(cx - prev_cx) < dedup_dist:
+                            is_new = False
+                            break
+                    if is_new:
+                        count += 1
+                        # Mark the track as counted for the visual
+                        for tid, t in tracker.tracks.items():
+                            if abs(t["cx"] - cx) < 30 and abs(t["cy"] - cy) < 30:
+                                t["counted"] = True
+                                tracker.total_counted += 1
+                                t["count_number"] = tracker.total_counted
+                                break
+                        logger.info(f"  COUNT #{count} cx={int(cx)} cy={int(cy)}")
+            prev_on_line = on_line_now
 
             annotated, in_view = annotate(frame.copy(), tracker, count, stencil)
 
