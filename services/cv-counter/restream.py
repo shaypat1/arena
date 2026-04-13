@@ -63,7 +63,7 @@ def load_camera_from_db(camera_id):
 
 
 class Tracker:
-    def __init__(self, max_gone=15, max_dist=80):
+    def __init__(self, max_gone=45, max_dist=200):
         self.next_id = 0
         self.tracks = {}
         self.max_gone = max_gone
