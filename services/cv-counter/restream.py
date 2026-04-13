@@ -162,26 +162,30 @@ def annotate(frame, tracker, count, stencil):
     cv2.line(frame, (g_left, g_y), (a_left, a_y), GREEN, 2)
     cv2.line(frame, (g_right, g_y), (a_right, a_y), GREEN, 2)
 
-    # Bounding boxes — only inside trapezoid
+    # Bounding boxes — only inside trapezoid, count visible
+    in_view = 0
     for tid, t in tracker.tracks.items():
         if t["gone"] > 3:
             continue
         cx, cy = int(t["cx"]), int(t["cy"])
         if cv2.pointPolygonTest(trap_pts, (cx, cy), False) < 0:
             continue
+        in_view += 1
         color = RED if t.get("counted") else GREEN
         cv2.rectangle(frame, (int(t["x1"]), int(t["y1"])), (int(t["x2"]), int(t["y2"])), color, 2)
         lbl = f"#{tid} {VEHICLE_CLASSES.get(t['cls'], '?')}"
         cv2.putText(frame, lbl, (int(t["x1"]), int(t["y1"]) - 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
-    # Count badge
-    cv2.rectangle(frame, (w - 130, 5), (w - 5, 55), (0, 0, 0), -1)
-    cv2.rectangle(frame, (w - 130, 5), (w - 5, 55), GREEN, 2)
-    cv2.putText(frame, "CARS", (w - 120, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.45, WHITE, 1)
-    cv2.putText(frame, str(count), (w - 90, 48), cv2.FONT_HERSHEY_SIMPLEX, 0.9, WHITE, 2)
+    # Count badge — top right
+    cv2.rectangle(frame, (w - 160, 5), (w - 5, 70), (0, 0, 0), -1)
+    cv2.rectangle(frame, (w - 160, 5), (w - 5, 70), GREEN, 2)
+    cv2.putText(frame, "COUNTED", (w - 150, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.4, WHITE, 1)
+    cv2.putText(frame, str(count), (w - 60, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, GREEN, 2)
+    cv2.putText(frame, "IN VIEW", (w - 150, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.4, WHITE, 1)
+    cv2.putText(frame, str(in_view), (w - 60, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, AMBER, 2)
 
-    return frame
+    return frame, in_view
 
 
 def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
@@ -261,7 +265,7 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
             newly_counted = tracker.check_gate(stencil, out_w, out_h)
             count += len(newly_counted)
 
-            annotated = annotate(frame.copy(), tracker, count, stencil)
+            annotated, in_view = annotate(frame.copy(), tracker, count, stencil)
 
             try:
                 out_proc.stdin.write(annotated.tobytes())
@@ -271,7 +275,7 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
             frame_idx += 1
             if frame_idx % (out_fps * 10) == 0:
                 elapsed = time.time() - t_start
-                logger.info(f"frame={frame_idx} count={count} fps={frame_idx / elapsed:.1f}")
+                logger.info(f"frame={frame_idx} count={count} in_view={in_view} fps={frame_idx / elapsed:.1f}")
 
     except KeyboardInterrupt:
         logger.info("Interrupted")
