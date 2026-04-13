@@ -101,39 +101,28 @@ class Tracker:
                 self.next_id += 1
 
     def check_gate(self, stencil, w, h):
-        """Count a car when it has been seen near BOTH the green and amber lines
-        within the trapezoid bounds. Uses a zone approach (within 20px of line)
-        instead of exact crossing detection to avoid missed counts."""
+        """Count when a car has been seen above the green line AND below the amber line.
+        Simple: if the track was ever above green y → crossed_green.
+        If it was ever below amber y → crossed_amber. Both = counted."""
         gl = stencil.get("green_line", {"y": 0.40, "left": 0.10, "right": 0.90})
         al = stencil.get("amber_line", {"y": 0.65, "left": 0.10, "right": 0.90})
 
         g_y = int(h * gl["y"])
-        g_left = int(w * gl["left"])
-        g_right = int(w * gl["right"])
         a_y = int(h * al["y"])
-        a_left = int(w * al["left"])
-        a_right = int(w * al["right"])
-
-        zone = int(h * 0.04)  # ~20px tolerance zone around each line
 
         counted = []
         for tid, t in self.tracks.items():
             if t["counted"]:
                 continue
 
-            cx, cy = int(t["cx"]), int(t["cy"])
+            cy = int(t["cy"])
 
-            # Check if car is near the green line and within its horizontal bounds
-            if not t["crossed_green"]:
-                if abs(cy - g_y) < zone and g_left <= cx <= g_right:
-                    t["crossed_green"] = True
+            if not t["crossed_green"] and cy <= g_y:
+                t["crossed_green"] = True
 
-            # Check if car is near the amber line and within its horizontal bounds
-            if not t["crossed_amber"]:
-                if abs(cy - a_y) < zone and a_left <= cx <= a_right:
-                    t["crossed_amber"] = True
+            if not t["crossed_amber"] and cy >= a_y:
+                t["crossed_amber"] = True
 
-            # Only count if seen near both lines
             if t["crossed_green"] and t["crossed_amber"]:
                 t["counted"] = True
                 counted.append(tid)
