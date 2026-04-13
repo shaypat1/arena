@@ -68,6 +68,7 @@ class Tracker:
         self.tracks = {}
         self.max_gone = max_gone
         self.max_dist = max_dist
+        self.total_counted = 0
 
     def update(self, dets):
         for tid in list(self.tracks):
@@ -123,8 +124,10 @@ class Tracker:
 
             if cv2.pointPolygonTest(trap, (cx, cy), False) >= 0:
                 t["counted"] = True
+                self.total_counted += 1
+                t["count_number"] = self.total_counted
                 counted.append(tid)
-                logger.info(f"  COUNT t={tid} cx={cx} cy={cy}")
+                logger.info(f"  COUNT #{self.total_counted} t={tid} cx={cx} cy={cy}")
 
         return counted
 
@@ -172,11 +175,15 @@ def annotate(frame, tracker, count, stencil):
             continue
         in_view += 1
         if t.get("counted"):
-            # Counted cars: big bold blue box
+            # Counted cars: big bold blue box with count number
+            num = t.get("count_number", "?")
             cv2.rectangle(frame, (int(t["x1"]), int(t["y1"])), (int(t["x2"]), int(t["y2"])), (255, 150, 0), 4)
-            lbl = f"#{tid} COUNTED"
-            cv2.putText(frame, lbl, (int(t["x1"]), int(t["y1"]) - 8),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 150, 0), 2)
+            lbl = str(num)
+            (tw, th), _ = cv2.getTextSize(lbl, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            cx_box = int((t["x1"] + t["x2"]) / 2)
+            cy_box = int((t["y1"] + t["y2"]) / 2)
+            cv2.putText(frame, lbl, (cx_box - tw // 2, cy_box + th // 2),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 150, 0), 2)
         else:
             # Not yet counted: normal green
             cv2.rectangle(frame, (int(t["x1"]), int(t["y1"])), (int(t["x2"]), int(t["y2"])), GREEN, 2)
