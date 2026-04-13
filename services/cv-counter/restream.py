@@ -100,10 +100,11 @@ class Tracker:
                 }
                 self.next_id += 1
 
-    def check_gate(self, stencil, w, h):
-        """Count when a car has been seen above the green line AND below the amber line.
-        Simple: if the track was ever above green y → crossed_green.
-        If it was ever below amber y → crossed_amber. Both = counted."""
+    def check_gate(self, stencil, w, h, frame_idx=0):
+        """Car enters through amber (bottom), exits through green (top).
+        crossed_amber = car was seen at/below amber line (entry).
+        crossed_green = car was seen at/above green line (exit).
+        Both = car traversed the zone = count."""
         gl = stencil.get("green_line", {"y": 0.40, "left": 0.10, "right": 0.90})
         al = stencil.get("amber_line", {"y": 0.65, "left": 0.10, "right": 0.90})
 
@@ -112,20 +113,26 @@ class Tracker:
 
         counted = []
         for tid, t in self.tracks.items():
-            if t["counted"]:
+            if t["counted"] or t["gone"] > 3:
                 continue
 
-            cy = int(t["cy"])
+            cx, cy = int(t["cx"]), int(t["cy"])
 
-            if not t["crossed_green"] and cy <= g_y:
-                t["crossed_green"] = True
-
+            # Entry: car at or below amber line
             if not t["crossed_amber"] and cy >= a_y:
                 t["crossed_amber"] = True
+                logger.info(f"  AMBER t={tid} cx={cx} cy={cy} (entry)")
 
-            if t["crossed_green"] and t["crossed_amber"]:
+            # Exit: car at or above green line
+            if not t["crossed_green"] and cy <= g_y:
+                t["crossed_green"] = True
+                logger.info(f"  GREEN t={tid} cx={cx} cy={cy} (exit)")
+
+            # Counted: entered and exited
+            if t["crossed_amber"] and t["crossed_green"]:
                 t["counted"] = True
                 counted.append(tid)
+                logger.info(f"  COUNT t={tid} cx={cx} cy={cy}")
 
         return counted
 
