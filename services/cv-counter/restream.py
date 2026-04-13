@@ -73,19 +73,17 @@ class Tracker:
     def update(self, dets):
         for tid in list(self.tracks):
             self.tracks[tid]["gone"] += 1
-            # Counted tracks die fast — don't let them steal new car detections
-            max_g = 5 if self.tracks[tid].get("counted") else self.max_gone
-            if self.tracks[tid]["gone"] > max_g:
+            if self.tracks[tid]["gone"] > self.max_gone:
                 del self.tracks[tid]
         if not dets:
             return
         used = set()
         for tid in list(self.tracks):
             t = self.tracks[tid]
-            # Counted tracks that are fading out shouldn't match new detections
-            if t.get("counted") and t["gone"] > 2:
-                continue
-            best_j, best_d = -1, self.max_dist
+            # Counted tracks only match very close detections (prevents stealing new cars)
+            # Uncounted tracks match at full distance
+            match_dist = 50 if t.get("counted") else self.max_dist
+            best_j, best_d = -1, match_dist
             for j, d in enumerate(dets):
                 if j in used:
                     continue
