@@ -101,9 +101,18 @@ class Tracker:
                 self.next_id += 1
 
     def check_gate(self, stencil, w, h, frame_idx=0):
-        """Count when a car crosses the green line (top of trapezoid)."""
+        """Count when a car is first seen inside the trapezoid. Once per track."""
         gl = stencil.get("green_line", {"y": 0.40, "left": 0.10, "right": 0.90})
+        al = stencil.get("amber_line", {"y": 0.65, "left": 0.10, "right": 0.90})
+
         g_y = int(h * gl["y"])
+        g_left = int(w * gl["left"])
+        g_right = int(w * gl["right"])
+        a_y = int(h * al["y"])
+        a_left = int(w * al["left"])
+        a_right = int(w * al["right"])
+
+        trap = np.array([[g_left, g_y], [g_right, g_y], [a_right, a_y], [a_left, a_y]])
 
         counted = []
         for tid, t in self.tracks.items():
@@ -112,8 +121,7 @@ class Tracker:
 
             cx, cy = int(t["cx"]), int(t["cy"])
 
-            if not t["crossed_green"] and cy <= g_y:
-                t["crossed_green"] = True
+            if cv2.pointPolygonTest(trap, (cx, cy), False) >= 0:
                 t["counted"] = True
                 counted.append(tid)
                 logger.info(f"  COUNT t={tid} cx={cx} cy={cy}")
