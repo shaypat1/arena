@@ -33,23 +33,19 @@ async function openRound(pool, redisClient, betType, feedId) {
     const locksAt = new Date(now.getTime() + betType.round_duration_seconds * 1000);
 
     // Pick a random camera where it's currently daytime (6am-8pm local time)
-    // AND has an ROI geometry defined (required by the CV counter).
-    // Falls back to any camera with an ROI if none are in daytime.
+    // Falls back to any active camera if none are in daytime.
     let { rows: camRows } = await client.query(
       `SELECT id, external_id, name, image_url, roi_geometry FROM cameras
        WHERE feed_id = $1 AND is_active = true
          AND timezone IS NOT NULL
-         AND roi_geometry IS NOT NULL
          AND EXTRACT(HOUR FROM NOW() AT TIME ZONE timezone) BETWEEN 6 AND 19
        ORDER BY RANDOM() LIMIT 1`,
       [feedId]
     );
     if (camRows.length === 0) {
-      // Fallback: any active camera with an ROI (ignore daytime filter)
       ({ rows: camRows } = await client.query(
         `SELECT id, external_id, name, image_url, roi_geometry FROM cameras
          WHERE feed_id = $1 AND is_active = true
-           AND roi_geometry IS NOT NULL
          ORDER BY RANDOM() LIMIT 1`,
         [feedId]
       ));

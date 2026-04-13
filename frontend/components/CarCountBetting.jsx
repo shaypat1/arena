@@ -9,17 +9,19 @@ import clsx from 'clsx';
 // Phase 1: Place bets (15s) — feed hidden, location shown
 // Phase 2: Counting (15s) — feed revealed, bets locked
 
-export default function CarCountBetting({ round, timerStart }) {
+export default function CarCountBetting({ round, timerStart, liveCount }) {
   const { user } = useAuth();
   const { post, get } = useApi();
 
   const [elapsed, setElapsed] = useState(0);
-  const [selectedBet, setSelectedBet] = useState(null); // 'even' | 'odd' | 'zero'
+  const [selectedBet, setSelectedBet] = useState(null);
   const [amount, setAmount] = useState('');
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState(null);
   const [placedBet, setPlacedBet] = useState(null);
-  const [settlement, setSettlement] = useState(null); // { car_count, winning_outcome }
+  const [settlement, setSettlement] = useState(null);
+  const [timeline, setTimeline] = useState([]); // [{time, count}, ...]
+  const [syncedCount, setSyncedCount] = useState(0);
 
   // Single timer from timerStart
   useEffect(() => {
@@ -38,13 +40,53 @@ export default function CarCountBetting({ round, timerStart }) {
     setError(null);
     setPlacedBet(null);
     setSettlement(null);
+    setTimeline([]);
+    setSyncedCount(0);
   }, [round?.id]);
 
   const phase1Left = Math.max(0, Math.ceil(15 - elapsed));
   const phase2Left = Math.max(0, Math.ceil(30 - elapsed));
   const phase3Left = Math.max(0, Math.ceil(34 - elapsed));
-  // Phase 1: betting (0-15s); Phase 2: counting (15-30s); Phase 3: result (30-34s)
   const phase = elapsed < 15 ? 1 : elapsed < 30 ? 2 : elapsed < 34 ? 3 : 0;
+
+  // Fetch the clip result JSON when counting phase begins
+  useEffect(() => {
+    if (phase !== 2 || !round?.id || timeline.length > 0) return;
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    let cancelled = false;
+    let attempt = 0;
+    async function fetchTimeline() {
+      while (!cancelled && attempt < 10) {
+        try {
+          const res = await fetch(`${API_URL}/api/clips/${round.id}.json`);
+          if (res.ok) {
+            const data = await res.json();
+            if (!cancelled) {
+              setTimeline(data.timeline || []);
+              setSettlement({ car_count: data.car_count, winning_outcome: data.outcome });
+            }
+            return;
+          }
+        } catch {}
+        attempt++;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    fetchTimeline();
+    return () => { cancelled = true; };
+  }, [phase, round?.id, timeline.length]);
+
+  // Sync count with clip playback during counting phase
+  useEffect(() => {
+    if (phase !== 2 || timeline.length === 0) return;
+    const clipElapsed = elapsed - 15; // time into the counting phase
+    let count = 0;
+    for (const entry of timeline) {
+      if (entry.time <= clipElapsed) count = entry.count;
+      else break;
+    }
+    setSyncedCount(count);
+  }, [phase, elapsed, timeline]);
 
   // ── Fetch settlement result once counting phase ends ─────
   useEffect(() => {
@@ -254,7 +296,20 @@ export default function CarCountBetting({ round, timerStart }) {
 
           <TimerBar seconds={phase2Left} total={15} />
 
-          <div className="p-5 space-y-4">
+          {/* Synced car count — matches the clip being played */}
+          <div className="px-5 pt-4 text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-wider">Cars counted</p>
+            <p className="text-5xl font-black text-white tabular-nums mt-1">
+              {syncedCount}
+            </p>
+            <p className={clsx('text-sm font-bold mt-1',
+              syncedCount === 0 ? 'text-gray-500' : syncedCount % 2 === 0 ? 'text-yellow-400' : 'text-yellow-400'
+            )}>
+              {syncedCount === 0 ? '—' : syncedCount % 2 === 0 ? 'EVEN' : 'ODD'}
+            </p>
+          </div>
+
+          <div className="p-5 pt-2 space-y-4">
             {placedBet ? (
               <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Your Bet</p>

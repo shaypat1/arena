@@ -50,3 +50,5 @@ data/
 *.onnx
 *.pt
 *.wasm
+services/api/stream/
+services/api/clips/

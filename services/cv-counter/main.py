@@ -47,7 +47,7 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://arena:arena_dev@localhost:5432/arena"
 )
-YOLO_MODEL = os.environ.get("YOLO_MODEL", "yolov8s.pt")
+YOLO_MODEL = os.environ.get("YOLO_MODEL", "yolov8n.pt")
 YOLO_DEVICE = os.environ.get("CV_DEVICE", "mps")
 
 

@@ -83,12 +83,22 @@ export default function FeedPage() {
     if (!timerStart || !feedId) return;
     preloaded.current = false;
 
-    // At 20s into the cycle, pre-fetch next round
+    // At 20s into the cycle, pre-fetch next round and preload its clip
     const preloadTimer = setTimeout(async () => {
       const result = await fetchNextCameraAndRound();
       if (result) {
         nextRef.current = result;
         preloaded.current = true;
+        // Preload the clip video into browser cache
+        if (result.round?.id) {
+          const clipUrl = `${API_URL}/api/clips/${result.round.id}.mp4`;
+          try {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = clipUrl;
+            document.head.appendChild(link);
+          } catch {}
+        }
       }
     }, 20000);
 
@@ -221,6 +231,7 @@ export default function FeedPage() {
             round={currentRound}
             timerStart={timerStart}
             cameraName={cameraName}
+            liveCount={cvTracks?.count ?? null}
           />
         </div>
       </div>
