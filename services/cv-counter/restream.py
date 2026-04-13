@@ -101,8 +101,9 @@ class Tracker:
                 self.next_id += 1
 
     def check_gate(self, stencil, w, h):
-        """Count a car only when it crosses BOTH the green and amber lines,
-        and its centroid is horizontally within the trapezoid at each crossing."""
+        """Count a car when it has been seen near BOTH the green and amber lines
+        within the trapezoid bounds. Uses a zone approach (within 20px of line)
+        instead of exact crossing detection to avoid missed counts."""
         gl = stencil.get("green_line", {"y": 0.40, "left": 0.10, "right": 0.90})
         al = stencil.get("amber_line", {"y": 0.65, "left": 0.10, "right": 0.90})
 
@@ -113,26 +114,26 @@ class Tracker:
         a_left = int(w * al["left"])
         a_right = int(w * al["right"])
 
+        zone = int(h * 0.04)  # ~20px tolerance zone around each line
+
         counted = []
         for tid, t in self.tracks.items():
             if t["counted"]:
                 continue
 
-            cx, cy, prev_cy = int(t["cx"]), int(t["cy"]), int(t["prev_cy"])
+            cx, cy = int(t["cx"]), int(t["cy"])
 
-            # Check green line crossing (must be within green line's horizontal bounds)
+            # Check if car is near the green line and within its horizontal bounds
             if not t["crossed_green"]:
-                if (prev_cy < g_y <= cy) or (prev_cy > g_y >= cy):
-                    if g_left <= cx <= g_right:
-                        t["crossed_green"] = True
+                if abs(cy - g_y) < zone and g_left <= cx <= g_right:
+                    t["crossed_green"] = True
 
-            # Check amber line crossing (must be within amber line's horizontal bounds)
+            # Check if car is near the amber line and within its horizontal bounds
             if not t["crossed_amber"]:
-                if (prev_cy < a_y <= cy) or (prev_cy > a_y >= cy):
-                    if a_left <= cx <= a_right:
-                        t["crossed_amber"] = True
+                if abs(cy - a_y) < zone and a_left <= cx <= a_right:
+                    t["crossed_amber"] = True
 
-            # Only count if both lines crossed
+            # Only count if seen near both lines
             if t["crossed_green"] and t["crossed_amber"]:
                 t["counted"] = True
                 counted.append(tid)
