@@ -171,11 +171,18 @@ def annotate(frame, tracker, count, stencil):
         if cv2.pointPolygonTest(trap_pts, (cx, cy), False) < 0:
             continue
         in_view += 1
-        color = RED if t.get("counted") else GREEN
-        cv2.rectangle(frame, (int(t["x1"]), int(t["y1"])), (int(t["x2"]), int(t["y2"])), color, 2)
-        lbl = f"#{tid} {VEHICLE_CLASSES.get(t['cls'], '?')}"
-        cv2.putText(frame, lbl, (int(t["x1"]), int(t["y1"]) - 5),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
+        if t.get("counted"):
+            # Counted cars: big bold blue box
+            cv2.rectangle(frame, (int(t["x1"]), int(t["y1"])), (int(t["x2"]), int(t["y2"])), (255, 150, 0), 4)
+            lbl = f"#{tid} COUNTED"
+            cv2.putText(frame, lbl, (int(t["x1"]), int(t["y1"]) - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 150, 0), 2)
+        else:
+            # Not yet counted: normal green
+            cv2.rectangle(frame, (int(t["x1"]), int(t["y1"])), (int(t["x2"]), int(t["y2"])), GREEN, 2)
+            lbl = f"#{tid} {VEHICLE_CLASSES.get(t['cls'], '?')}"
+            cv2.putText(frame, lbl, (int(t["x1"]), int(t["y1"]) - 5),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, GREEN, 1)
 
     # Count badge — top right
     cv2.rectangle(frame, (w - 160, 5), (w - 5, 70), (0, 0, 0), -1)
