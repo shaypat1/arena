@@ -82,7 +82,7 @@ class Tracker:
             t = self.tracks[tid]
             # Counted tracks only match very close detections (prevents stealing new cars)
             # Uncounted tracks match at full distance
-            match_dist = 50 if t.get("counted") else self.max_dist
+            match_dist = 120 if t.get("counted") else self.max_dist
             best_j, best_d = -1, match_dist
             for j, d in enumerate(dets):
                 if j in used:
