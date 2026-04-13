@@ -275,42 +275,48 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
 
             frame = np.frombuffer(raw, dtype=np.uint8).reshape((out_h, out_w, 3))
 
-            results = model(frame, verbose=False, conf=conf)
+            # ByteTrack: detect + track in one call, gives stable IDs
+            results = model.track(frame, verbose=False, conf=conf, persist=True,
+                                  tracker="bytetrack.yaml", classes=list(VEHICLE_CLASSES))
+
+            # Build detection list from tracked results
             dets = []
-            for box in results[0].boxes:
-                cls = int(box.cls[0])
-                if cls not in VEHICLE_CLASSES:
-                    continue
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                dets.append({"cx": (x1 + x2) / 2, "cy": (y1 + y2) / 2,
-                             "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-                             "cls": cls, "conf": float(box.conf[0])})
+            tracked_boxes = results[0].boxes
+            if tracked_boxes.id is not None:
+                for i, box in enumerate(tracked_boxes):
+                    cls = int(box.cls[0])
+                    track_id = int(box.id[0])
+                    x1, y1, x2, y2 = box.xyxy[0].tolist()
+                    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+                    dets.append({"cx": cx, "cy": cy, "x1": x1, "y1": y1,
+                                 "x2": x2, "y2": y2, "cls": cls,
+                                 "conf": float(box.conf[0]), "track_id": track_id})
 
-            tracker.update(dets)
+            # Update our tracker for visual display (uses ByteTrack IDs now)
+            for d in dets:
+                tid = d["track_id"]
+                if tid not in tracker.tracks:
+                    tracker.tracks[tid] = {**d, "gone": 0, "counted": False}
+                else:
+                    tracker.tracks[tid].update(**d, gone=0)
+            # Age out old tracks
+            for tid in list(tracker.tracks):
+                if not any(d["track_id"] == tid for d in dets):
+                    tracker.tracks[tid]["gone"] += 1
+                    if tracker.tracks[tid]["gone"] > 30:
+                        del tracker.tracks[tid]
 
-            # Count: any detection centroid on the green line that wasn't there last frame
-            on_line_now = []
+            # Count: tracked car's centroid on the green line, once per track ID
             for d in dets:
                 cx, cy = d["cx"], d["cy"]
-                if abs(cy - green_y) < line_tolerance and green_left <= cx <= green_right:
-                    on_line_now.append(cx)
-                    # Check if this is a new car (not near any centroid from last frame)
-                    is_new = True
-                    for prev_cx in prev_on_line:
-                        if abs(cx - prev_cx) < dedup_dist:
-                            is_new = False
-                            break
-                    if is_new:
+                tid = d["track_id"]
+                t = tracker.tracks.get(tid)
+                if t and not t.get("counted"):
+                    if abs(cy - green_y) < line_tolerance and green_left <= cx <= green_right:
                         count += 1
-                        # Mark the track as counted for the visual
-                        for tid, t in tracker.tracks.items():
-                            if abs(t["cx"] - cx) < 30 and abs(t["cy"] - cy) < 30:
-                                t["counted"] = True
-                                tracker.total_counted += 1
-                                t["count_number"] = tracker.total_counted
-                                break
-                        logger.info(f"  COUNT #{count} cx={int(cx)} cy={int(cy)}")
-            prev_on_line = on_line_now
+                        t["counted"] = True
+                        t["count_number"] = count
+                        logger.info(f"  COUNT #{count} track={tid} cx={int(cx)} cy={int(cy)}")
 
             annotated, in_view = annotate(frame.copy(), tracker, count, stencil)
 
