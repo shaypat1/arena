@@ -296,7 +296,7 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
             for d in dets:
                 tid = d["track_id"]
                 if tid not in tracker.tracks:
-                    tracker.tracks[tid] = {**d, "gone": 0, "counted": False}
+                    tracker.tracks[tid] = {**d, "gone": 0, "counted": False, "was_below": False}
                 else:
                     tracker.tracks[tid].update(**d, gone=0)
             # Age out old tracks
@@ -306,13 +306,21 @@ def run(url, stencil, model_path, conf, out_fps, out_w, out_h):
                     if tracker.tracks[tid]["gone"] > 30:
                         del tracker.tracks[tid]
 
-            # Count: tracked car's centroid on the green line, once per track ID
+            # Count: track was seen below green line, then above it = crossed
             for d in dets:
                 cx, cy = d["cx"], d["cy"]
                 tid = d["track_id"]
                 t = tracker.tracks.get(tid)
-                if t and not t.get("counted"):
-                    if abs(cy - green_y) < line_tolerance and green_left <= cx <= green_right:
+                if not t or t.get("counted"):
+                    continue
+
+                # Mark if seen below green line
+                if cy > green_y + line_tolerance:
+                    t["was_below"] = True
+
+                # If was below and now above = crossed the line
+                if t.get("was_below") and cy < green_y - line_tolerance:
+                    if green_left <= cx <= green_right:
                         count += 1
                         t["counted"] = True
                         t["count_number"] = count
