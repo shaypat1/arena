@@ -82,20 +82,28 @@ export default function TestStreamPage() {
   }, [active]);
 
   return (
-    <div style={{ background: '#000', minHeight: '100vh', padding: 20 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 15 }}>
+    <div style={{ background: '#000', minHeight: '100vh', display: 'flex' }}>
+      {/* Video */}
+      <div style={{ flex: 1, padding: 20 }}>
+        <p style={{ color: '#888', fontSize: 14, marginBottom: 10 }}>{active} — {status}</p>
+        <video ref={videoRef} style={{ width: '100%' }} autoPlay muted playsInline />
+      </div>
+      {/* Sidebar */}
+      <div style={{
+        width: 200, borderLeft: '1px solid #333', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: 4, padding: 10,
+      }}>
         {Object.keys(STREAMS).map(k => (
           <button key={k} onClick={() => setActive(k)}
             style={{
-              padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13,
-              background: active === k ? '#4f46e5' : '#333', color: '#fff', fontWeight: 'bold',
+              padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontSize: 13, textAlign: 'left', whiteSpace: 'nowrap',
+              background: active === k ? '#4f46e5' : '#222', color: '#fff', fontWeight: active === k ? 'bold' : 'normal',
             }}>
             {k}
           </button>
         ))}
       </div>
-      <p style={{ color: '#888', fontSize: 14, marginBottom: 10 }}>{active} — {status}</p>
-      <video ref={videoRef} style={{ width: '100%', maxWidth: 960 }} autoPlay muted playsInline />
     </div>
   );
 }
