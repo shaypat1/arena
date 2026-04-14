@@ -83,11 +83,11 @@ export default function TestStreamPage() {
 
   return (
     <div style={{ background: '#000', minHeight: '100vh', padding: 20 }}>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 15 }}>
         {Object.keys(STREAMS).map(k => (
           <button key={k} onClick={() => setActive(k)}
             style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13,
               background: active === k ? '#4f46e5' : '#333', color: '#fff', fontWeight: 'bold',
             }}>
             {k}
