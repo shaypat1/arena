@@ -17,7 +17,6 @@ const STREAMS = {
   'SC Bridge': `${API}/api/stream/sc_bridge/stream.m3u8`,
   'SC I-85': `${API}/api/stream/sc_i85/stream.m3u8`,
   'Rome': `${API}/api/stream/rome/stream.m3u8`,
-  'Turkey': `${API}/api/stream/turkey/stream.m3u8`,
 };
 
 export default function TestStreamPage() {
