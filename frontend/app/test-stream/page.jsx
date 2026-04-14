@@ -23,6 +23,15 @@ const STREAMS = {
   'Iceland': `${API}/api/stream/iceland/stream.m3u8`,
   // Russia
   'Astrakhan': `${API}/api/stream/astrakhan/stream.m3u8`,
+  // California (new)
+  'CA SLO 1080p': `${API}/api/stream/ca_slo/stream.m3u8`,
+  'CA Goleta 1080p': `${API}/api/stream/ca_goleta/stream.m3u8`,
+  'CA Grapevine': `${API}/api/stream/ca_grapevine/stream.m3u8`,
+  'CA LA I-110': `${API}/api/stream/ca_la_i110/stream.m3u8`,
+  'CA LA I-5': `${API}/api/stream/ca_la_i5/stream.m3u8`,
+  'CA Santa Monica': `${API}/api/stream/ca_santa_monica/stream.m3u8`,
+  'CA Sacramento': `${API}/api/stream/ca_sac_i5/stream.m3u8`,
+  'CA OC SR-57': `${API}/api/stream/ca_oc_57/stream.m3u8`,
 };
 
 export default function TestStreamPage() {
