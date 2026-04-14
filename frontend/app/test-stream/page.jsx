@@ -6,14 +6,18 @@ import Hls from 'hls.js';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const STREAMS = {
   'NYC BQE': `${API}/api/stream/nyc/stream.m3u8`,
-  'NYC Van Wyck': `${API}/api/stream/nyc_vanwyck/stream.m3u8`,
   'NYC Bronx': `${API}/api/stream/nyc_bronx/stream.m3u8`,
+  'NYC LIE': `${API}/api/stream/nyc_lie/stream.m3u8`,
+  'NYC GCP': `${API}/api/stream/nyc_gcp/stream.m3u8`,
   'Rochester': `${API}/api/stream/rochester/stream.m3u8`,
   'CA I-405': `${API}/api/stream/cali/stream.m3u8`,
   'CA Emeryville': `${API}/api/stream/ca_emeryville/stream.m3u8`,
   'Iowa 4K': `${API}/api/stream/iowa/stream.m3u8`,
   'Iowa Dubuque': `${API}/api/stream/iowa_dubuque/stream.m3u8`,
   'SC Bridge': `${API}/api/stream/sc_bridge/stream.m3u8`,
+  'SC I-85': `${API}/api/stream/sc_i85/stream.m3u8`,
+  'Rome': `${API}/api/stream/rome/stream.m3u8`,
+  'Turkey': `${API}/api/stream/turkey/stream.m3u8`,
 };
 
 export default function TestStreamPage() {
