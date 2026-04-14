@@ -17,12 +17,6 @@ const STREAMS = {
   'Iowa Dubuque': `${API}/api/stream/iowa_dubuque/stream.m3u8`,
   'SC Bridge': `${API}/api/stream/sc_bridge/stream.m3u8`,
   'SC I-85': `${API}/api/stream/sc_i85/stream.m3u8`,
-  // South Korea
-  'Geoje Korea': `${API}/api/stream/geoje1/stream.m3u8`,
-  'Chungju Korea': `${API}/api/stream/chungju/stream.m3u8`,
-  'Seoul 1': `${API}/api/stream/seoul1/stream.m3u8`,
-  'Seoul 2': `${API}/api/stream/seoul2/stream.m3u8`,
-  'Incheon': `${API}/api/stream/incheon/stream.m3u8`,
   // Europe
   'Rome': `${API}/api/stream/rome/stream.m3u8`,
   'Italy Anzio': `${API}/api/stream/italy_anzio/stream.m3u8`,
@@ -86,7 +80,7 @@ export default function TestStreamPage() {
       {/* Video */}
       <div style={{ flex: 1, padding: 20 }}>
         <p style={{ color: '#888', fontSize: 14, marginBottom: 10 }}>{active} — {status}</p>
-        <video ref={videoRef} style={{ width: '100%' }} autoPlay muted playsInline />
+        <video ref={videoRef} style={{ width: '100%', maxWidth: 720 }} autoPlay muted playsInline />
       </div>
       {/* Sidebar */}
       <div style={{
