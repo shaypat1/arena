@@ -5,16 +5,15 @@ import Hls from 'hls.js';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const STREAMS = {
-  cv_restream: `${API}/api/stream/stream.m3u8`,
-  nyc_bqe_raw: 'https://s53.nysdot.skyvdn.com:443/rtplive/R11_082/playlist.m3u8',
-  california_raw: 'https://wzmedia.dot.ca.gov/D7/CCTV-340.stream/playlist.m3u8',
-  iowa_4k_raw: 'https://iowadotsfs1.us-east-1.skyvdn.com:443/rtplive/wwdtv08lb/playlist.m3u8',
+  nyc_restream: `${API}/api/stream/nyc/stream.m3u8`,
+  cali_restream: `${API}/api/stream/cali/stream.m3u8`,
+  iowa_restream: `${API}/api/stream/iowa/stream.m3u8`,
 };
 
 export default function TestStreamPage() {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
-  const [active, setActive] = useState('cv_restream');
+  const [active, setActive] = useState('nyc_restream');
   const [status, setStatus] = useState('loading...');
 
   useEffect(() => {

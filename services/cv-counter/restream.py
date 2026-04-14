@@ -352,12 +352,16 @@ if __name__ == "__main__":
     p.add_argument("--camera-id", help="Load URL + stencil from DB by external_id")
     p.add_argument("--url", help="Direct HLS URL (if not using --camera-id)")
     p.add_argument("--stencil", help="JSON stencil (if not using --camera-id)")
+    p.add_argument("--output-dir", help="Override output directory for HLS segments")
     p.add_argument("--model", default="yolov8n.pt")
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--fps", type=int, default=15)
     p.add_argument("--width", type=int, default=960)
     p.add_argument("--height", type=int, default=540)
     args = p.parse_args()
+
+    if args.output_dir:
+        OUTPUT_DIR = args.output_dir
 
     if args.camera_id:
         cam = load_camera_from_db(args.camera_id)
