@@ -140,9 +140,10 @@ export default function TestStreamPage() {
     return () => clearInterval(iv);
   }, [active]);
 
-  // Auto-scroll logs
+  // Auto-scroll logs — only within the log container, not the page
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = logsEndRef.current?.parentElement;
+    if (container) container.scrollTop = container.scrollHeight;
   }, [logs]);
 
   return (
